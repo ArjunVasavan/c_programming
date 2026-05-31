@@ -1,0 +1,39 @@
+#include<stdio.h>
+void scan_arr(int row,int column,int arr[row][column])
+{
+  printf("Enter the elements : ");
+  for ( int i = 0 ; i < row ; i++ )
+  {
+    for ( int j = 0 ; j < column ; j++ )
+    {
+      scanf("%d",&arr[i][j]);
+    }
+  }
+}
+void print_arr(int row,int column,int arr[row][column])
+{
+  for ( int i = 0 ; i < row ; i++ )
+  {
+    for ( int j = 0 ; j < column ; j++ )
+    {
+      printf("%d ",arr[i][j]);
+    }
+    printf("\n");
+  }
+
+}
+
+int main()
+{
+  int row,column;
+  printf("Enter the row for : ");
+  scanf("%d",&row);
+  printf("Enter the column : ");
+  scanf("%d",&column);
+
+  int arr[row][column];
+
+  scan_arr(row,column,arr);
+
+  print_arr(row,column,arr);
+}
