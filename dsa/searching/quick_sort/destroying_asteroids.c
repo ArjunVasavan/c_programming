@@ -1,3 +1,5 @@
+/* NOTE: Here Acsending quick_sort is used
+ */
 // @leet start
 #include <stdbool.h>
 #include <stdlib.h>
