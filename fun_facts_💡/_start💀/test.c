@@ -1,7 +1,7 @@
 /*
 ========================================
  COMPILE:
- gcc -nostdlib -static -Wl,-e,_start test.c -o test
+ gcc -nostdlib -static -Wl,-e,_start test.c -o a.out
 ========================================
 */
 
