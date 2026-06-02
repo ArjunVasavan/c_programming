@@ -47,11 +47,6 @@ __attribute__((naked)) void _start() {
     );
 }
 
-/*
-----------------------------------------
- REAL logic here (safe C code)
-----------------------------------------
-*/
 void real_start(long *stack) {
 
     int argc = stack[0];
