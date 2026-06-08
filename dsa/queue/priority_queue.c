@@ -2,7 +2,7 @@
 #define SIZE 5
 
 typedef struct {
-    int data;
+    int data; /* this will store the eke */
     int priority;
 } Item;
 

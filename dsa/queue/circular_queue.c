@@ -1,3 +1,5 @@
+ /* can be used on ADC ring buffer or UART ring buffer o */
+
 #include <stdio.h>
 #define SIZE 5
 
