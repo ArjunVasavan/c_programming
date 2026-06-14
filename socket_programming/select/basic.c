@@ -9,6 +9,19 @@
  * so that read() will not block
  */
 
+// NOTE: select return value
+// int ret = select(...);
+//
+// if (ret == -1) {
+//     perror("select");
+// }
+// else if (ret == 0) {
+//     // timeout happened
+// }
+// else {
+//     // some fds are ready
+// }
+
 int main() {
     fd_set readfds;
 
