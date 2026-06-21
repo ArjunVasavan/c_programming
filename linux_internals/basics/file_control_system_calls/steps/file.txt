@@ -1,0 +1,6 @@
+Child is trying to lock
+Child successfully locked
+2 3 5 7 11 13 
+Parent trying to lock 
+Parent locked succesfully
+0 1 1 2 3 5 8 
