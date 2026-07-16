@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 #define NUM_CHARS 256
@@ -74,6 +75,85 @@ void trie_print(trienode* root) {
     trie_recursive_print(root,prefix, 0);
 }
 
+bool node_has_children(trienode* node) {
+    if ( node == NULL ) {
+        return false;
+    }
+    for ( int i = 0; i < NUM_CHARS; i++ ) {
+        if ( node->children[i] != NULL ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+trienode* trie_recursive_delete(trienode* node, char* text,bool* deleted ) {
+
+    if ( node == NULL ) {
+        return node;
+    }
+
+    if ( *text == '\0' ) {
+        if ( node->terminal == true ) {
+            node->terminal = false;
+            *deleted = true;
+
+            if ( node_has_children(node) == false ) {
+                free(node);
+                node = NULL;
+            }
+        }
+        return node;
+    }
+
+    node->children[text[0]] = trie_recursive_delete(node->children[text[0]], text+1, deleted);
+
+    if ( *deleted &&
+            node_has_children(node) == false &&
+            node->terminal == false ) {
+        free(node);
+        node = NULL;
+    }
+    return node;
+}
+
+bool trie_delete(trienode** root, char* signed_text) {
+
+    unsigned char* text = (unsigned char*)signed_text;
+
+    bool result = false;
+
+    if ( *root == NULL ) {
+        return false;
+    }
+
+    bool deleted = false;
+
+    *root = trie_recursive_delete(*root, signed_text, &deleted);
+    return deleted;
+
+
+}
+
+bool trie_search(trienode* root, char* signed_text) {
+
+    unsigned char* text = (unsigned char*)signed_text;
+    int length = strlen(signed_text);
+    trienode* temp = root;
+    for ( int i = 0; i < length; i++) {
+        if ( temp->children[text[i]] == NULL ) {
+            return false;
+        }
+        temp = temp->children[text[i]];
+    }
+
+    if ( temp->terminal == false ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 int main(int argc, char** argv) {
     trienode* root = NULL;
     trie_insert(&root, "KIT");
@@ -81,6 +161,10 @@ int main(int argc, char** argv) {
     trie_insert(&root, "KITE");
     trie_insert(&root, "KID");
     trie_insert(&root, "KART");
+    trie_print(root);
 
+    printf("The element is %s",trie_search(root, "Hello") == true ? "presnet" : "not present\n");
+
+    trie_delete(&root, "KID");
     trie_print(root);
 }
