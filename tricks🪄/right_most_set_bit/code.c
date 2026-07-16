@@ -4,9 +4,25 @@ int rightmost_set_bit_v1(int x) {
     return x & (-x);
 }
 
+/* NOTE: x & ( - x )
+ * computer's store negative number's in 2's compliment
+ * to get -x you have to flip every bit and add 1 with it
+ * adding 1 to complimented cause's trailing of 1 till it reaches an 0
+ * the first 0 it hit's is flipped to 0
+ * now when we and with the original number we get the right most bit as set
+ */
+
 int rightmost_set_bit_v2(int x) {
     return x ^ (x & (x - 1));
 }
+
+/* NOTE: x ^ ( x & (x - 1 ))
+ * x & ( x - 1 ) -> this remove's the right most set bit
+ * when using exor it give's the high on bit which is opposite
+ * so when we done x & ( x - 1 ) the right most bit is gone
+ * so when we do xor with the original the original's right most bit is high
+ * through this exor will make that right most part as only high and all the rest become's zero
+ */
 
 int rightmost_set_bit_position(int x) {
     int bit_value = x & (-x);
