@@ -1,0 +1,154 @@
+require "nvchad.mappings"
+-- add yours here
+local map = vim.keymap.set
+map("n", ";", ":", { desc = "CMD enter command mode" })
+map("i", "jk", "<ESC>")
+
+-- 🔍 Keep search centered
+map("n", "n", "nzzzv", { desc = "Next search (centered)" })
+map("n", "N", "Nzzzv", { desc = "Prev search (centered)" })
+
+-- 📜 Keep half-page movement centered
+map("n", "<C-d>", "<C-d>zz", { desc = "Half page down (centered)" })
+map("n", "<C-u>", "<C-u>zz", { desc = "Half page up (centered)" })
+
+-- ✅ CODE RUNNER
+map("n", "<leader>r", "<cmd>RunCode<CR>", { desc = "Run code" })
+
+-- ✅ TERMINAL
+map("n", "<leader>t", "<cmd>ToggleTerm<CR>", { desc = "Toggle terminal" })
+map("t", "<leader>t", "<C-\\><C-n><cmd>ToggleTerm<CR>", { desc = "Toggle terminal" })
+
+-- ✅ VERTICAL TERMINAL WITH PROPER SIZE
+map("n", "<leader>v", "<cmd>ToggleTerm direction=vertical size=70<CR>", { desc = "Toggle vertical terminal" })
+map("t", "<leader>v", "<C-\\><C-n><cmd>ToggleTerm<CR>", { desc = "Toggle vertical terminal" })
+
+-- ✅ FLASH
+map({ "n", "x", "o" }, "s", function() require("flash").jump() end, { desc = "Flash jump" })
+
+-- ✅ Smart Save & Force Quit (NvChad-compatible)
+map("n", "<leader><Esc>", "<cmd>wa | qa!<CR>", { desc = "Smart save & force quit all" })
+
+-- Delete without yanking
+map("n", "<leader>d", '"_d', { desc = "Delete without yanking" })
+map("v", "<leader>d", '"_d', { desc = "Delete without yanking" })
+
+-- ✅ COLORCOLUMN TOGGLE
+map("n", "<leader>cl", function()
+  if vim.wo.colorcolumn == "" then
+    vim.wo.colorcolumn = "80"
+  else
+    vim.wo.colorcolumn = ""
+  end
+end, { desc = "Toggle 80 char line" })
+
+-- ✅ INSERT COMMENT WITH SPACE
+map("n", "<leader>i", function()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+
+  local new_line, cursor_offset
+
+  if vim.bo.filetype == "python" or vim.bo.filetype == "sh" then
+    new_line = line .. "  #  "
+    cursor_offset = #line + 4
+  else
+    new_line = line .. " /*  */"
+    cursor_offset = #line + 4
+  end
+
+  vim.api.nvim_set_current_line(new_line)
+  vim.api.nvim_win_set_cursor(0, { row, cursor_offset })
+  vim.cmd("startinsert")
+end, { desc = "Insert /* */ comment" })
+
+-- Delete whatever in between
+map("n", "<leader>b", function()
+  local line = vim.api.nvim_get_current_line()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  col = col + 1
+
+  if #line == 0 then
+    return
+  end
+
+  local delimiters = { "(", ")", "[", "]", "{", "}", "<", ">", '"', "'", "`", ",", ";", ":" }
+
+  local function is_delimiter(char)
+    for _, delim in ipairs(delimiters) do
+      if char == delim then return true end
+    end
+    return false
+  end
+
+  local left_pos = nil
+  local right_pos = nil
+
+  for i = col - 1, 1, -1 do
+    if is_delimiter(line:sub(i, i)) then
+      left_pos = i
+      break
+    end
+  end
+
+  local start_search = col
+  if col <= #line and is_delimiter(line:sub(col, col)) then
+    start_search = col + 1
+    if not left_pos then
+      left_pos = col
+    end
+  end
+
+  for i = start_search, #line do
+    if is_delimiter(line:sub(i, i)) then
+      right_pos = i
+      break
+    end
+  end
+
+  if not left_pos or not right_pos then
+    return
+  end
+
+  if right_pos <= left_pos then
+    return
+  end
+
+  if right_pos - left_pos <= 1 then
+    return
+  end
+
+  local before = line:sub(1, left_pos)
+  local after = line:sub(right_pos)
+
+  vim.api.nvim_set_current_line(before .. after)
+  vim.api.nvim_win_set_cursor(0, {row, left_pos})
+end, { desc = "Delete between delimiters" })
+
+-- 🪵 Move between splits (NvimTree & code)
+vim.keymap.set("n", "<leader><Left>", "<C-w>h", { desc = "Move to NvimTree (Left)", noremap = true, silent = true })
+vim.keymap.set("n", "<leader><Right>", "<C-w>l", { desc = "Move to Code/Right split", noremap = true, silent = true })
+
+-- whitespace dot toggle
+map("n", "<leader>ws", function()
+  if vim.wo.list then
+    vim.wo.list = false
+  else
+    vim.wo.list = true
+    vim.opt.listchars = { space = "·", tab = ">-", eol = "$" }
+  end
+end, { desc = "Toggle whitespace visibility" })
+
+-- Go to end of line and append
+map("n", "\\", "A", { desc = "Go to end of line and append" })
+
+-- Jump to Trouble window at bottom
+map("n", "<leader><Down>", "<C-w>j", { desc = "Jump to Trouble window" })
+
+-- Arrow insertion mappings (INSERT mode)
+
+-- Movement (Ctrl)
+map("i", "<C-h>", "<Left>",  { desc = "Move left in insert" })
+map("i", "<C-j>", "<Down>",  { desc = "Move down in insert" })
+map("i", "<C-k>", "<Up>",    { desc = "Move up in insert" })
+map("i", "<C-l>", "<Right>", { desc = "Move right in insert" })
