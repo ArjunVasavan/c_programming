@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -9,8 +8,7 @@
 #define PORT 8080
 #define BUF_SIZE 1024
 
-int is_goodbye(char *msg)
-{
+int is_goodbye(char *msg) {
     for (int i = 0; msg[i]; i++)
         msg[i] = tolower(msg[i]);
 
@@ -19,8 +17,7 @@ int is_goodbye(char *msg)
     return 0;
 }
 
-int main()
-{
+int main() {
     int sock;
     struct sockaddr_in server;
     char buf[BUF_SIZE];

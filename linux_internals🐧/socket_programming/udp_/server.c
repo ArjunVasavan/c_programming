@@ -9,8 +9,7 @@
 #define PORT 8080
 #define BUF_SIZE 1024
 
-int is_goodbye(char *msg)
-{
+int is_goodbye(char *msg) {
     for (int i = 0; msg[i]; i++)
         msg[i] = tolower(msg[i]);
 
@@ -19,9 +18,8 @@ int is_goodbye(char *msg)
     return 0;
 }
 
-int main()
-{
-    int sock, opt = 1;
+int main() {
+    int sock;
     struct sockaddr_in server, client;
     socklen_t client_len = sizeof(client);
     char buf[BUF_SIZE];
@@ -31,8 +29,6 @@ int main()
         perror("socket");
         return 1;
     }
-
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;

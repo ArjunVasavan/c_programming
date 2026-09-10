@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -8,8 +9,7 @@
 #define PORT 8080
 #define BUF_SIZE 1024
 
-int is_goodbye(char *msg)
-{
+int is_goodbye(char *msg) {
     for (int i = 0; msg[i]; i++)
         msg[i] = tolower(msg[i]);
 
@@ -18,9 +18,8 @@ int is_goodbye(char *msg)
     return 0;
 }
 
-int main()
-{
-    int server_fd, client_fd, opt = 1;
+int main() {
+    int server_fd, client_fd;
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
     char buf[BUF_SIZE];
@@ -30,8 +29,6 @@ int main()
         perror("socket");
         return 1;
     }
-
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
