@@ -1,60 +1,163 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/kthread.h>
+#include <linux/slab.h>
+#include <linux/net.h>
+#include <linux/in.h>
+#include <linux/socket.h>
+#include <linux/delay.h>
+#include <net/net_namespace.h>
 
 #define SERVER_PORT 2325
 #define BUFFER_SIZE 1024
 
-int main(int argc, char *argv[])
-{
-    const char *server_ip = (argc > 1) ? argv[1] : "127.0.0.1";
-    int sock_fd;
-    struct sockaddr_in server_addr;
-    socklen_t addr_len = sizeof(server_addr);
-    char send_buf[] = "Hello from userspace UDP client";
-    char recv_buf[BUFFER_SIZE];
-    ssize_t n;
+static char *server_ip = "127.0.0.1";
+module_param(server_ip, charp, 0444);
+MODULE_PARM_DESC(server_ip, "IP address of the UDP server to send to");
 
-    sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock_fd < 0) {
-        perror("socket");
-        return 1;
+static struct task_struct *client_thread;
+
+static int udp_client_thread(void *arg)
+{
+    struct socket *sock = NULL;
+    struct sockaddr_in server_addr;
+    char *buffer;
+    char send_msg[] = "Hello from kernel UDP client";
+    int ret;
+
+    buffer = kmalloc(BUFFER_SIZE, GFP_KERNEL);
+    if (!buffer) {
+        pr_err("UDP client: buffer allocation failed\n");
+        return -ENOMEM;
     }
+
+    ret = sock_create_kern(&init_net,
+                           AF_INET,
+                           SOCK_DGRAM,
+                           IPPROTO_UDP,
+                           &sock);
+
+    if (ret < 0) {
+        pr_err("UDP client: socket creation failed: %d\n", ret);
+        kfree(buffer);
+        return ret;
+    }
+
+    pr_info("UDP client: socket created\n");
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERVER_PORT);
 
-    if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
-        fprintf(stderr, "Invalid address: %s\n", server_ip);
-        close(sock_fd);
-        return 1;
+    ret = in4_pton(server_ip, -1, (u8 *)&server_addr.sin_addr.s_addr, -1, NULL);
+    if (ret != 1) {
+        pr_err("UDP client: invalid server IP: %s\n", server_ip);
+        sock_release(sock);
+        kfree(buffer);
+        return -EINVAL;
     }
 
-    n = sendto(sock_fd, send_buf, strlen(send_buf), 0,
-              (struct sockaddr *)&server_addr, addr_len);
-    if (n < 0) {
-        perror("sendto");
-        close(sock_fd);
-        return 1;
+    {
+        struct msghdr msg;
+        struct kvec vec;
+
+        memset(&msg, 0, sizeof(msg));
+
+        msg.msg_name = &server_addr;
+        msg.msg_namelen = sizeof(server_addr);
+
+        vec.iov_base = send_msg;
+        vec.iov_len = strlen(send_msg);
+
+        ret = kernel_sendmsg(sock, &msg, &vec, 1, strlen(send_msg));
+
+        if (ret < 0) {
+            pr_err("UDP client: send failed: %d\n", ret);
+            sock_release(sock);
+            kfree(buffer);
+            return ret;
+        }
+
+        pr_info("UDP client: sent to %s:%d: %s\n", server_ip, SERVER_PORT, send_msg);
     }
-    printf("Sent to %s:%d: %s\n", server_ip, SERVER_PORT, send_buf);
 
-    memset(recv_buf, 0, sizeof(recv_buf));
-    n = recvfrom(sock_fd, recv_buf, sizeof(recv_buf) - 1, 0,
-                (struct sockaddr *)&server_addr, &addr_len);
-    if (n < 0) {
-        perror("recvfrom");
-        close(sock_fd);
-        return 1;
+    memset(buffer, 0, BUFFER_SIZE);
+
+    {
+        struct msghdr msg;
+        struct kvec vec;
+        struct sockaddr_in from_addr;
+        int i;
+
+        for (i = 0; i < 50 && !kthread_should_stop(); i++) {
+
+            memset(&msg, 0, sizeof(msg));
+            memset(&from_addr, 0, sizeof(from_addr));
+
+            msg.msg_name = &from_addr;
+            msg.msg_namelen = sizeof(from_addr);
+
+            vec.iov_base = buffer;
+            vec.iov_len = BUFFER_SIZE - 1;
+
+            ret = kernel_recvmsg(sock, &msg, &vec, 1, BUFFER_SIZE - 1, MSG_DONTWAIT);
+
+            if (ret > 0) {
+                buffer[ret] = '\0';
+                pr_info("UDP client: received: %s\n", buffer);
+                break;
+            } else if (ret == -EAGAIN) {
+                msleep(100);
+                continue;
+            } else {
+                pr_err("UDP client: receive failed: %d\n", ret);
+                break;
+            }
+        }
     }
 
-    recv_buf[n] = '\0';
-    printf("Received: %s\n", recv_buf);
+    sock_release(sock);
+    kfree(buffer);
 
-    close(sock_fd);
+    pr_info("UDP client: done\n");
+
     return 0;
 }
+
+
+static int __init udp_client_init(void)
+{
+    pr_info("UDP client: module loaded\n");
+
+    client_thread = kthread_run(udp_client_thread,
+                                NULL,
+                                "udp_client");
+
+    if (IS_ERR(client_thread)) {
+        pr_err("UDP client: failed to create thread\n");
+        client_thread = NULL;
+        return PTR_ERR(client_thread);
+    }
+
+    return 0;
+}
+
+
+static void __exit udp_client_exit(void)
+{
+    pr_info("UDP client: stopping\n");
+
+    if (client_thread) {
+        kthread_stop(client_thread);
+        client_thread = NULL;
+    }
+
+    pr_info("UDP client: module unloaded\n");
+}
+
+
+module_init(udp_client_init);
+module_exit(udp_client_exit);
+
+MODULE_LICENSE("GPL");
