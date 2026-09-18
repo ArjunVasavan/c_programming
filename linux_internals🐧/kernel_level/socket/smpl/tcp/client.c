@@ -19,7 +19,6 @@ MODULE_PARM_DESC(server_ip, "IP address of the TCP server to connect to");
 
 static struct task_struct *client_thread;
 
-/* One connect/send/receive cycle. Returns 0 on success, <0 on error. */
 static int tcp_client_exchange(char *buffer)
 {
     struct socket *sock = NULL;
@@ -84,9 +83,6 @@ static int tcp_client_thread(void *arg)
     if (!buffer)
         return -ENOMEM;
 
-    /* Retry until the module is unloaded. kthread_should_stop() is
-     * checked before and after each attempt so kthread_stop() wakes
-     * the thread promptly instead of waiting out the full delay. */
     while (!kthread_should_stop()) {
         ret = tcp_client_exchange(buffer);
         if (ret < 0)
