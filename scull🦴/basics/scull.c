@@ -12,17 +12,6 @@
 
 MODULE_LICENSE("Dual BSD/GPL");
 
-/* module-wide config: quantum/qset sizes and device-number defaults */
-
-int scull_major = 0;
-int scull_minor = 0;
-int scull_nr_devs = 4;
-int scull_quantum = 4000;
-int scull_qset = 1000;
-
-struct scull_qset *scull_follow(struct scull_dev *dev, int n);
-int scull_trim(struct scull_dev *dev);
-
 /* core data structures for a scull device */
 
 struct scull_qset {
@@ -40,10 +29,22 @@ struct scull_dev {
 	struct cdev cdev;         /* Char device structure      */
 };
 
+/* module-wide config: quantum/qset sizes and device-number defaults */
+
+int scull_major = 0;
+int scull_minor = 0;
+int scull_nr_devs = 4;
+int scull_quantum = 4000;
+int scull_qset = 1000;
+
+/* forward declaration: scull_read/scull_write call this before its
+   real definition appears further down the file */
+static struct scull_qset *scull_follow(struct scull_dev *dev, int n);
+
 /* array of scull devices, allocated at module load time */
 struct scull_dev *scull_devices;
 
-int scull_trim(struct scull_dev *dev)
+static int scull_trim(struct scull_dev *dev)
 {
 	struct scull_qset *next, *dptr;
 	int qset = dev->qset;   /* "dev" is not-null */
@@ -66,7 +67,7 @@ int scull_trim(struct scull_dev *dev)
 	return 0;
 }
 
-int scull_open(struct inode *inode, struct file *filp)
+static int scull_open(struct inode *inode, struct file *filp)
 {
 	struct scull_dev *dev; /* device information */
 	dev = container_of(inode->i_cdev, struct scull_dev, cdev);
@@ -79,12 +80,12 @@ int scull_open(struct inode *inode, struct file *filp)
 	return 0;          /* success */
 }
 
-int scull_release(struct inode *inode, struct file *filp)
+static int scull_release(struct inode *inode, struct file *filp)
 {
 	return 0;
 }
 
-ssize_t scull_read(struct file *filp, char __user *buf, size_t count,
+static ssize_t scull_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
 	struct scull_dev *dev = filp->private_data;
@@ -128,7 +129,7 @@ ssize_t scull_read(struct file *filp, char __user *buf, size_t count,
 	return retval;
 }
 
-ssize_t scull_write(struct file *filp, const char __user *buf, size_t count,
+static ssize_t scull_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
 	struct scull_dev *dev = filp->private_data;
@@ -184,7 +185,7 @@ ssize_t scull_write(struct file *filp, const char __user *buf, size_t count,
 /* only open/release/read/write are implemented here; llseek and
    ioctl are left unset (NULL), so the kernel falls back to its
    default behavior for those operations */
-struct file_operations scull_fops = {
+static struct file_operations scull_fops = {
 	.owner =    THIS_MODULE,
 	.read =     scull_read,
 	.write =    scull_write,
@@ -206,7 +207,7 @@ static void scull_setup_cdev(struct scull_dev *dev, int index)
 
 /* walk the scull_qset linked list to item n, allocating new nodes
    along the way if they don't exist yet */
-struct scull_qset *scull_follow(struct scull_dev *dev, int n)
+static struct scull_qset *scull_follow(struct scull_dev *dev, int n)
 {
 	struct scull_qset *qs = dev->data;
 
